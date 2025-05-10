@@ -150,7 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetTimer() {
         stopTimer();
         isWorkSession = true;
-        // Don't reset sessionCount - we want to keep tracking total sessions
+        sessionCount = 1;
+        totalWorkTime = 0;
         sessionIndicator = 1; // Reset session indicator (1/4, 2/4, etc.)
         timeLeft = workDuration;
         updateDisplay();
