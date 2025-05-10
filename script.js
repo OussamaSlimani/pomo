@@ -10,15 +10,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default durations
     const DEFAULT_WORK_DURATION = 25 * 60;
     const DEFAULT_BREAK_DURATION = 5 * 60;
+    const DEFAULT_LONG_BREAK_DURATION = 15 * 60;
 
     // Load state from localStorage or use defaults
     let workDuration = parseInt(localStorage.getItem('workDuration')) || DEFAULT_WORK_DURATION;
     let breakDuration = parseInt(localStorage.getItem('breakDuration')) || DEFAULT_BREAK_DURATION;
+    let longBreakDuration = parseInt(localStorage.getItem('longBreakDuration')) || DEFAULT_LONG_BREAK_DURATION;
     let timeLeft = parseInt(localStorage.getItem('timeLeft')) || workDuration;
     let isRunning = localStorage.getItem('isRunning') === 'true';
     let isWorkSession = localStorage.getItem('isWorkSession') !== 'false'; // default to true
     let sessionCount = parseInt(localStorage.getItem('sessionCount')) || 1;
     let totalWorkTime = parseInt(localStorage.getItem('totalWorkTime')) || 0;
+    let sessionIndicator = parseInt(localStorage.getItem('sessionIndicator')) || 1;
     
     let timerInterval = null;
 
@@ -29,11 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveState() {
         localStorage.setItem('workDuration', workDuration);
         localStorage.setItem('breakDuration', breakDuration);
+        localStorage.setItem('longBreakDuration', longBreakDuration);
         localStorage.setItem('timeLeft', timeLeft);
         localStorage.setItem('isRunning', isRunning);
         localStorage.setItem('isWorkSession', isWorkSession);
         localStorage.setItem('sessionCount', sessionCount);
         localStorage.setItem('totalWorkTime', totalWorkTime);
+        localStorage.setItem('sessionIndicator', sessionIndicator);
     }
 
     function setStartButtonIcon(isPlaying) {
@@ -48,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
         if (isWorkSession) {
-            sessionInfo.textContent = `Work Session ${sessionCount}`;
+            sessionInfo.textContent = `Work Session ${sessionCount} (${sessionIndicator}/4)`;
             document.body.classList.remove('break-mode');
             controls.forEach(btn => {
                 btn.classList.remove('break-button');
@@ -56,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             statsDisplay.textContent = '';
         } else {
-            sessionInfo.textContent = 'Break Time';
+            const isLongBreak = sessionIndicator === 4;
+            sessionInfo.textContent = isLongBreak ? 'Long Break Time' : 'Short Break Time';
             document.body.classList.add('break-mode');
             controls.forEach(btn => {
                 btn.classList.remove('work-button');
@@ -95,13 +101,19 @@ document.addEventListener('DOMContentLoaded', () => {
         playNotificationWithVibration();
 
         if (isWorkSession) {
+            // Work session ended, start break
             isWorkSession = false;
-            timeLeft = breakDuration;
+            // Check if this is the 4th session (long break)
+            timeLeft = (sessionIndicator === 4) ? longBreakDuration : breakDuration;
             totalWorkTime += workDuration;
         } else {
+            // Break ended, start work session
             isWorkSession = true;
             timeLeft = workDuration;
             sessionCount++;
+            
+            // Update session indicator (reset after 4)
+            sessionIndicator = sessionIndicator === 4 ? 1 : sessionIndicator + 1;
         }
 
         updateDisplay();
@@ -138,16 +150,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetTimer() {
         stopTimer();
         isWorkSession = true;
-        sessionCount = 1;
-        totalWorkTime = 0;
+        // Don't reset sessionCount - we want to keep tracking total sessions
+        sessionIndicator = 1; // Reset session indicator (1/4, 2/4, etc.)
         timeLeft = workDuration;
         updateDisplay();
-        // Clear saved state
+        // Clear only the necessary state
         localStorage.removeItem('timeLeft');
         localStorage.removeItem('isRunning');
         localStorage.removeItem('isWorkSession');
-        localStorage.removeItem('sessionCount');
-        localStorage.removeItem('totalWorkTime');
+        localStorage.removeItem('sessionIndicator');
     }
 
     function toggleTimer() {
